@@ -41,7 +41,7 @@
 </head>
 
 </body>
-	<script src="https://cdn.jsdelivr.net/gh/t109598105/t109598105-dicom2raw-demo@latest/Lib/dicomtoraw.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/gh/t109598105/dicom2raw-demo@latest/Lib/dicomtoraw.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/gh/t109598105/ScoreOutputer@latest/dist/scoreoutputer.min.js"></script>
 
 	<div style="padding: 20px; margin: 10px; border-style: solid">
@@ -54,6 +54,7 @@
 		</div>
 		<div id="info"> 等待 Dicom... </div>
 		<div id="size"></div>
+		<canvas id="canvas" width="300" height="200"></canvas>
 		<div> 
 			<input type="text" placeholder="檔名_長_寬_高" id="file-name"> 
 		</div>
@@ -69,7 +70,7 @@
 	</div>
 
 	<script>
-		var dicom2Raw;
+		var dicom2Raw, canvas;
 		var savebtn = document.getElementById('download-button');
 		function convertRaw(){
 			/**
@@ -95,16 +96,32 @@
 					 * 組成一個真正有序的 object
 					*/
 					dicom2Raw.build();
-					document.getElementById('info').innerText = '讀取成功';
+					
 					
 					var dimension = dicom2Raw.getDim();
 					document.getElementById('size').innerText = '尺寸: ' + dimension.x + ' x ' + dimension.y + ' x ' + dimension.z;
 					
 					dicom2Raw.concatnate(()=>{
-						
-						savebtn.setAttribute('class', 'my-btn allow');
 
 						console.log(dicom2Raw);
+						console.log(dicom2Raw.cloneSeries.images[0].getImageType());
+						console.log('getdim : ', dimension);
+						document.getElementById('info').innerText = '讀取成功';
+						savebtn.setAttribute('class', 'my-btn allow');
+						console.log(dicom2Raw.getImagePixel(10));
+						var pixelData = dicom2Raw.getImagePixel(10);
+						console.log('rawDara', dicom2Raw.rawData);
+
+						canvas = document.getElementById('canvas');
+						var ctx = canvas.getContext('2D');
+						var width = canvas.width;
+						var height = canvas.height;
+						console.log('width', width, 'height', height);
+						var id = ctx.createImageData(0, 0, width, height);
+						id = ctx.createImageData(dicom2Raw.getImagePixel(10));
+						var pixels = id.data;
+						console.log('id', pixels);
+						// ctx.putImageData(id, 0, 0);
 						 
 					});
 				}
@@ -121,15 +138,21 @@
 		*/
 
 		savebtn.addEventListener('click', function(e){
-			var blob = new Blob([dicom2Raw.rawData], {type: "image/x-panasonic-raw"});
-			var filename = 'CorCTA_512_512_51_uint16';
-			// var filename = document.getElementById('file-name'); 
-			var a = document.createElement('a'); 
-			var url = URL.createObjectURL(blob); 
+			// var blob = new Blob([dicom2Raw.rawData], {type: "image/x-panasonic-raw"});
+			// var filename = 'CorCTA_512_512_51_uint16';
+			// // var filename = document.getElementById('file-name'); 
+			// var a = document.createElement('a'); 
+			// var url = URL.createObjectURL(blob); 
 			
-			a.href = url; 
-			a.download = filename; 
-			a.click();
+			// a.href = url; 
+			// a.download = filename; 
+			// a.click();
+
+			var filename = document.getElementById('file-name').value;
+			Dicom2Raw.downloadData(
+				filename + '.raw',
+				dicom2Raw.rawData
+			)
 		});
 
 		window.onload = function(){
@@ -167,7 +190,7 @@
 			 * 自評表 QAQ
 			 * 有做到再勾阿!!
 			*/
-			var so = new ScoreOutputer("你的學號");
+			var so = new ScoreOutputer("110598050");
 			so.installCSS(function(){
 				so.addChild("成功讀取範例程式所附的 DICOM 檔案", 6, true);
 				so.addChild("轉換 DICOM 序列為 RAW 檔案", 1, false);

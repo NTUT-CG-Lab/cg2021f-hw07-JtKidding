@@ -54,16 +54,22 @@
 		</div>
 		<div id="info"> 等待 Dicom... </div>
 		<div id="size"></div>
-		<canvas id="canvas" width="300" height="200"></canvas>
 		<div> 
 			<input type="text" placeholder="檔名_長_寬_高" id="file-name"> 
 		</div>
-		<div>
+		<canvas id="canvas"></canvas>
+		<div class="mt-3">
 			<a 
 				class="my-btn disabled"
 				id="download-button"
 				target="_blank"
-			> 下載 RAW 檔案</a>
+			> 下載 RAW 檔案(8bit)</a>
+
+			<a 
+				class="my-btn disabled"
+				id="download-button2"
+				target="_blank"
+			> 下載 RAW 檔案(16bit)</a>
 		</div>
 		
 		
@@ -72,6 +78,7 @@
 	<script>
 		var dicom2Raw, canvas;
 		var savebtn = document.getElementById('download-button');
+		var savebtn2 = document.getElementById('download-button2');
 		function convertRaw(){
 			/**
 			 * 使用 Dicom2Raw 這個 class 進行轉換
@@ -108,20 +115,43 @@
 						console.log('getdim : ', dimension);
 						document.getElementById('info').innerText = '讀取成功';
 						savebtn.setAttribute('class', 'my-btn allow');
+						savebtn2.setAttribute('class', 'my-btn allow');
 						console.log(dicom2Raw.getImagePixel(10));
-						var pixelData = dicom2Raw.getImagePixel(10);
-						console.log('rawDara', dicom2Raw.rawData);
-
+						var middernPic = dicom2Raw.cloneSeries.images.length;
+						middernPic = Math.floor(middernPic / 2);
+						console.log('pixelMax', middernPic);
+						var pixelData = new Uint16Array(dicom2Raw.getImagePixel(middernPic));
 						canvas = document.getElementById('canvas');
-						var ctx = canvas.getContext('2D');
-						var width = canvas.width;
-						var height = canvas.height;
+						canvas.setAttribute('width', dimension.x);
+						canvas.setAttribute('height', dimension.y);
+						var ctx = canvas.getContext('2d');
+						var width = dimension.x;
+						var height = dimension.y;
 						console.log('width', width, 'height', height);
-						var id = ctx.createImageData(0, 0, width, height);
-						id = ctx.createImageData(dicom2Raw.getImagePixel(10));
+						console.log(ctx);
+						ctx.clearRect(0, 0, width, height);
+						var id = ctx.getImageData(0, 0, width, height);
 						var pixels = id.data;
+						var pixelMax = pixelData[0];
+						for (var i = 1; i < pixelData.length; i++) {
+							if (pixelData[i] > pixelMax){
+								pixelMax = pixelData[i];
+							}
+						}123456789
+						for (var i = 0; i < height; i++) {
+							for (var j = 0; j < width; j++) {
+								let index = i * width + j;
+								let index2 = index * 4;
+								// console.log('pixel', pixelData[index]);
+								let pix_index = pixelData[index] / pixelMax * 255;
+								pixels[index2] = pix_index;
+								pixels[index2 + 1] = pix_index;
+								pixels[index2 + 2] = pix_index;
+								pixels[index2 + 3] = 255;
+							}
+						}
 						console.log('id', pixels);
-						// ctx.putImageData(id, 0, 0);
+						ctx.putImageData(id, 0, 0);
 						 
 					});
 				}
@@ -150,7 +180,15 @@
 
 			var filename = document.getElementById('file-name').value;
 			Dicom2Raw.downloadData(
-				filename + '.raw',
+				filename + '_uint8.raw',
+				new Uint8Array(new Uint16Array(dicom2Raw.rawData))
+			)
+		});
+
+		savebtn2.addEventListener('click', function(e){
+			var filename = document.getElementById('file-name').value;
+			Dicom2Raw.downloadData(
+				filename + '_uint16.raw',
 				dicom2Raw.rawData
 			)
 		});
@@ -166,6 +204,8 @@
 				convertRaw();
 				
 			});
+
+		
 			
 			
 			/**
@@ -193,10 +233,10 @@
 			var so = new ScoreOutputer("110598050");
 			so.installCSS(function(){
 				so.addChild("成功讀取範例程式所附的 DICOM 檔案", 6, true);
-				so.addChild("轉換 DICOM 序列為 RAW 檔案", 1, false);
-				so.addChild("成功下載轉換好的 RAW 檔案", 1, false);
-				so.addChild("可下載 8 bit 或 16 bit 的 RAW 檔案", 1, false);
-				so.addChild("在網頁中顯示中間的圖像", 1, false);
+				so.addChild("轉換 DICOM 序列為 RAW 檔案", 1, true);
+				so.addChild("成功下載轉換好的 RAW 檔案", 1, true);
+				so.addChild("可下載 8 bit 或 16 bit 的 RAW 檔案", 1, true);
+				so.addChild("在網頁中顯示中間的圖像", 1, true);
 				
 				so.renderModal(
 					document.body,
